@@ -34,16 +34,25 @@ def strip_code(text):
     return out
 
 
+SETEXT = re.compile(r'^\s{0,3}(=+|-+)\s*$')
+
+
 def anchors(path):
     seen, result = {}, set()
-    for line in strip_code(path.read_text(encoding='utf-8', errors='replace')):
+    lines = strip_code(path.read_text(encoding='utf-8', errors='replace'))
+    for idx, line in enumerate(lines):
         result.update(HTML_ID.findall(line))
         m = HEAD.match(line)
         if m:
-            s = slug(m.group(1))
-            n = seen.get(s, 0)
-            seen[s] = n + 1
-            result.add(s if n == 0 else f'{s}-{n}')
+            title = m.group(1)
+        elif idx and SETEXT.match(line) and lines[idx - 1].strip() and not HEAD.match(lines[idx - 1]):
+            title = lines[idx - 1].strip()
+        else:
+            continue
+        s = slug(title)
+        n = seen.get(s, 0)
+        seen[s] = n + 1
+        result.add(s if n == 0 else f'{s}-{n}')
     return result
 
 

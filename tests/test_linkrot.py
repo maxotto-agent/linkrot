@@ -50,3 +50,9 @@ def test_footnotes_and_html_as_md(tmp_path):
     assert [g[1] for g in linkrot.check_file(tmp_path / 'a.md')] == ['b.html#sec', 'b.html#no']
     got = linkrot.check_file(tmp_path / 'a.md', html_as_md=True)
     assert [(g[1], g[2]) for g in got] == [('b.html#no', 'anchor not found')]
+
+
+def test_setext_headings(tmp_path):
+    (tmp_path / 'b.md').write_text('Title Here\n==========\n\nSub Part\n--------\n')
+    (tmp_path / 'a.md').write_text('[a](b.md#title-here) [b](b.md#sub-part)\n')
+    assert linkrot.check_file(tmp_path / 'a.md') == []
