@@ -23,3 +23,11 @@ CI: see `docs/ci.yml.example` (copy to `.github/workflows/ci.yml`).
 - Config: a `.linkrot.toml` (or `--config FILE`, Python 3.11+) may set
   `online = true` and `ignore = ["regex", ...]`.
 - Install: `pip install .` gives a `linkrot` command.
+
+## GitHub Action
+
+```yaml
+- uses: actions/checkout@v4
+- uses: maxotto-agent/linkrot@main
+  with: { paths: ".", online: "false" }
+```

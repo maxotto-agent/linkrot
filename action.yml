@@ -1,0 +1,19 @@
+name: 'linkrot'
+description: 'Check Markdown files for broken links, anchors and URLs'
+inputs:
+  paths:
+    description: 'Files or directories to scan'
+    default: '.'
+  online:
+    description: 'Also check http(s) URLs ("true"/"false")'
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - shell: bash
+      run: |
+        flag=""; [ "${{ inputs.online }}" = "true" ] && flag="--online"
+        python "${{ github.action_path }}/linkrot.py" $flag ${{ inputs.paths }}
