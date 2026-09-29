@@ -42,3 +42,11 @@ def test_config(tmp_path, monkeypatch):
     (tmp_path / 'a.md').write_text('[y](skip/me.md)\n')
     monkeypatch.chdir(tmp_path)
     assert linkrot.main(['a.md']) == 0
+
+
+def test_footnotes_and_html_as_md(tmp_path):
+    (tmp_path / 'b.md').write_text('# Sec\n')
+    (tmp_path / 'a.md').write_text('x[^1] [p](b.html#sec) [q](b.html#no)\n\n[^1]: [u](b.md)\n')
+    assert [g[1] for g in linkrot.check_file(tmp_path / 'a.md')] == ['b.html#sec', 'b.html#no']
+    got = linkrot.check_file(tmp_path / 'a.md', html_as_md=True)
+    assert [(g[1], g[2]) for g in got] == [('b.html#no', 'anchor not found')]

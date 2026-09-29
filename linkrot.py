@@ -12,7 +12,7 @@ except ImportError:  # Python < 3.11
 LINK = re.compile(r'(?<!\!)\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)|!\[[^\]]*\]\(([^)\s]+)\)')
 HEAD = re.compile(r'^#{1,6}\s+(.*?)\s*#*\s*$')
 HTML_ID = re.compile(r'<[a-zA-Z][^>]*?\b(?:id|name)\s*=\s*["\']([^"\']+)["\']')
-REFDEF = re.compile(r'^\s{0,3}\[([^\]]+)\]:\s*<?(\S+?)>?(?:\s+.*)?$')
+REFDEF = re.compile(r'^\s{0,3}\[([^\]^][^\]]*)\]:\s*<?(\S+?)>?(?:\s+.*)?$')
 REFUSE = re.compile(r'(?<!\!)\[[^\]]*\]\[([^\]]*)\]|(?<!\!)\[([^\]]+)\](?![\[(:])')
 FENCE = re.compile(r'^\s*(```|~~~)')
 
@@ -85,7 +85,7 @@ def targets(lines):
                 yield i, defs[label]
 
 
-def check_file(path, online=False, check=check_url):
+def check_file(path, online=False, check=check_url, html_as_md=False):
     """Return list of (lineno, target, problem)."""
     problems = []
     lines = strip_code(path.read_text(encoding='utf-8', errors='replace'))
@@ -103,6 +103,8 @@ def check_file(path, online=False, check=check_url):
             continue
         file_part, _, frag = target.partition('#')
         dest = path if not file_part else (path.parent / file_part.split('?')[0])
+        if html_as_md and dest.suffix == '.html' and not dest.exists():
+            dest = dest.with_suffix('.md')
         if not dest.exists():
             problems.append((i, target, 'file not found'))
         elif frag and dest.is_file() and dest.suffix.lower() in ('.md', '.markdown'):
@@ -129,6 +131,8 @@ def main(argv=None):
     ap.add_argument('--json', action='store_true', help='print problems as JSON')
     ap.add_argument('--ignore', action='append', default=[], metavar='REGEX',
                     help='skip targets matching REGEX (repeatable)')
+    ap.add_argument('--html-as-md', action='store_true',
+                    help='resolve links to missing .html files to the .md source (mdBook, Sphinx-style sites)')
     ap.add_argument('--config', metavar='FILE', help='TOML config (default: .linkrot.toml if present)')
     a = ap.parse_args(argv)
     cfg = load_config(a.config)
@@ -139,7 +143,7 @@ def main(argv=None):
         files += sorted(p.rglob('*.md')) if p.is_dir() else [p]
     bad, report = 0, []
     for f in files:
-        for ln, t, why in check_file(f, a.online):
+        for ln, t, why in check_file(f, a.online, html_as_md=a.html_as_md or cfg.get('html_as_md', False)):
             if any(r.search(t) for r in ignore):
                 continue
             report.append({'file': str(f), 'line': ln, 'target': t, 'problem': why})
