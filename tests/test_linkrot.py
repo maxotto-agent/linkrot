@@ -27,3 +27,18 @@ def test_json_and_ignore(tmp_path, capsys):
     assert linkrot.main([str(f), '--json', '--ignore', '^skip/']) == 1
     data = json.loads(capsys.readouterr().out)
     assert [d['target'] for d in data] == ['missing.md']
+
+
+def test_html_ids_and_reference_links(tmp_path):
+    (tmp_path / 'b.md').write_text('<a name="old-id"></a>\n<h2 id="Sec">x</h2>\n')
+    (tmp_path / 'a.md').write_text(
+        '[a][r1] [b][r2] [c][] [d]\n\n[r1]: b.md#old-id\n[r2]: b.md#Sec\n[c]: gone.md\n[d]: b.md#nope\n')
+    got = linkrot.check_file(tmp_path / 'a.md')
+    assert [(g[1], g[2]) for g in got] == [('gone.md', 'file not found'), ('b.md#nope', 'anchor not found')]
+
+
+def test_config(tmp_path, monkeypatch):
+    (tmp_path / '.linkrot.toml').write_text('ignore = ["^skip/"]\n')
+    (tmp_path / 'a.md').write_text('[y](skip/me.md)\n')
+    monkeypatch.chdir(tmp_path)
+    assert linkrot.main(['a.md']) == 0

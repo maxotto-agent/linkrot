@@ -14,3 +14,12 @@ Exit status is 1 if any problem is found. Tests: `pytest`.
 - `--ignore REGEX` skip matching targets (repeatable)
 
 CI: see `docs/ci.yml.example` (copy to `.github/workflows/ci.yml`).
+
+## More features (v0.2)
+
+- Anchors also match HTML `id=` / `name=` attributes (e.g. `<a name="x"></a>`).
+- Reference-style links (`[text][ref]`, `[ref][]`, `[ref]` with `[ref]: url`) are checked.
+- URLs are checked in parallel (8 threads per file, each unique URL once).
+- Config: a `.linkrot.toml` (or `--config FILE`, Python 3.11+) may set
+  `online = true` and `ignore = ["regex", ...]`.
+- Install: `pip install .` gives a `linkrot` command.

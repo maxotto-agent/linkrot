@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 """linkrot: check Markdown files for broken local links, anchors and URLs."""
 import argparse, json, re, sys, urllib.request, urllib.error
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+try:
+    import tomllib
+except ImportError:  # Python < 3.11
+    tomllib = None
 
 LINK = re.compile(r'(?<!\!)\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)|!\[[^\]]*\]\(([^)\s]+)\)')
 HEAD = re.compile(r'^#{1,6}\s+(.*?)\s*#*\s*$')
+HTML_ID = re.compile(r'<[a-zA-Z][^>]*?\b(?:id|name)\s*=\s*["\']([^"\']+)["\']')
+REFDEF = re.compile(r'^\s{0,3}\[([^\]]+)\]:\s*<?(\S+?)>?(?:\s+.*)?$')
+REFUSE = re.compile(r'(?<!\!)\[[^\]]*\]\[([^\]]*)\]|(?<!\!)\[([^\]]+)\](?![\[(:])')
 FENCE = re.compile(r'^\s*(```|~~~)')
 
 
@@ -28,6 +37,7 @@ def strip_code(text):
 def anchors(path):
     seen, result = {}, set()
     for line in strip_code(path.read_text(encoding='utf-8', errors='replace')):
+        result.update(HTML_ID.findall(line))
         m = HEAD.match(line)
         if m:
             s = slug(m.group(1))
@@ -55,28 +65,61 @@ def check_url(url, timeout=10):
         return str(e)
 
 
+def targets(lines):
+    """Yield (lineno, target) for inline and reference-style links."""
+    defs = {}
+    for line in lines:
+        m = REFDEF.match(line)
+        if m:
+            defs.setdefault(m.group(1).lower(), m.group(2))
+    for i, line in enumerate(lines, 1):
+        if REFDEF.match(line):
+            continue
+        for m in LINK.finditer(line):
+            yield i, m.group(1) or m.group(2)
+        for m in REFUSE.finditer(line):
+            label = (m.group(1) or m.group(2) or '').lower()
+            if m.group(1) is not None and not label:
+                label = m.group(0)[1:m.group(0).index(']')].lower()
+            if label in defs:
+                yield i, defs[label]
+
+
 def check_file(path, online=False, check=check_url):
     """Return list of (lineno, target, problem)."""
     problems = []
-    for i, line in enumerate(strip_code(path.read_text(encoding='utf-8', errors='replace')), 1):
-        for m in LINK.finditer(line):
-            target = m.group(1) or m.group(2)
-            if re.match(r'^(mailto:|tel:)', target):
-                continue
-            if re.match(r'^https?://', target):
-                if online:
-                    err = check(target)
-                    if err:
-                        problems.append((i, target, err))
-                continue
-            file_part, _, frag = target.partition('#')
-            dest = path if not file_part else (path.parent / file_part.split('?')[0])
-            if not dest.exists():
-                problems.append((i, target, 'file not found'))
-            elif frag and dest.is_file() and dest.suffix.lower() in ('.md', '.markdown'):
-                if frag.lower() not in anchors(dest):
-                    problems.append((i, target, 'anchor not found'))
+    lines = strip_code(path.read_text(encoding='utf-8', errors='replace'))
+    urls = {t for _, t in targets(lines) if re.match(r'^https?://', t)} if online else set()
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        results = dict(zip(sorted(urls), ex.map(check, sorted(urls))))
+    for i, target in targets(lines):
+        if re.match(r'^(mailto:|tel:)', target):
+            continue
+        if re.match(r'^https?://', target):
+            if online:
+                err = results.get(target)
+                if err:
+                    problems.append((i, target, err))
+            continue
+        file_part, _, frag = target.partition('#')
+        dest = path if not file_part else (path.parent / file_part.split('?')[0])
+        if not dest.exists():
+            problems.append((i, target, 'file not found'))
+        elif frag and dest.is_file() and dest.suffix.lower() in ('.md', '.markdown'):
+            if frag.lower() not in {a.lower() for a in anchors(dest)}:
+                problems.append((i, target, 'anchor not found'))
     return problems
+
+
+def load_config(path):
+    p = Path(path) if path else Path('.linkrot.toml')
+    if not p.is_file():
+        if path:
+            sys.exit(f'linkrot: config not found: {path}')
+        return {}
+    if tomllib is None:
+        sys.exit('linkrot: config files need Python 3.11+')
+    return tomllib.loads(p.read_text(encoding='utf-8'))
 
 
 def main(argv=None):
@@ -86,8 +129,11 @@ def main(argv=None):
     ap.add_argument('--json', action='store_true', help='print problems as JSON')
     ap.add_argument('--ignore', action='append', default=[], metavar='REGEX',
                     help='skip targets matching REGEX (repeatable)')
+    ap.add_argument('--config', metavar='FILE', help='TOML config (default: .linkrot.toml if present)')
     a = ap.parse_args(argv)
-    ignore = [re.compile(r) for r in a.ignore]
+    cfg = load_config(a.config)
+    a.online = a.online or cfg.get('online', False)
+    ignore = [re.compile(r) for r in a.ignore + list(cfg.get('ignore', []))]
     files = []
     for p in map(Path, a.paths):
         files += sorted(p.rglob('*.md')) if p.is_dir() else [p]
