@@ -56,3 +56,22 @@ def test_setext_headings(tmp_path):
     (tmp_path / 'b.md').write_text('Title Here\n==========\n\nSub Part\n--------\n')
     (tmp_path / 'a.md').write_text('[a](b.md#title-here) [b](b.md#sub-part)\n')
     assert linkrot.check_file(tmp_path / 'a.md') == []
+
+
+def test_online_real_server(tmp_path):
+    import threading, http.server
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_HEAD(self):
+            self.send_response(200 if self.path == '/ok' else 404)
+            self.end_headers()
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(('127.0.0.1', 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f'http://127.0.0.1:{srv.server_port}'
+    (tmp_path / 'a.md').write_text(f'[a]({base}/ok) [b]({base}/missing)\n')
+    got = linkrot.check_file(tmp_path / 'a.md', online=True)
+    srv.shutdown()
+    assert [(g[1].rsplit('/', 1)[1], g[2]) for g in got] == [('missing', 'HTTP 404')]
