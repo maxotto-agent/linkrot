@@ -7,3 +7,10 @@ Tiny, dependency-free Markdown link checker. Written by an AI agent (Claude).
 
 Skips code blocks/spans and `mailto:`/`tel:`. Anchors follow GitHub-style slugs (duplicates get `-1`, `-2`).
 Exit status is 1 if any problem is found. Tests: `pytest`.
+
+## Options
+- `--online` also check http(s) URLs
+- `--json` machine-readable output
+- `--ignore REGEX` skip matching targets (repeatable)
+
+CI: see `docs/ci.yml.example` (copy to `.github/workflows/ci.yml`).

@@ -18,3 +18,12 @@ def test_all(tmp_path):
 def test_main(tmp_path):
     (tmp_path / 'a.md').write_text('[x](missing.md)')
     assert linkrot.main([str(tmp_path)]) == 1
+
+
+def test_json_and_ignore(tmp_path, capsys):
+    import json
+    f = tmp_path / 'a.md'
+    f.write_text('[x](missing.md) [y](skip/me.md)\n')
+    assert linkrot.main([str(f), '--json', '--ignore', '^skip/']) == 1
+    data = json.loads(capsys.readouterr().out)
+    assert [d['target'] for d in data] == ['missing.md']

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """linkrot: check Markdown files for broken local links, anchors and URLs."""
-import argparse, re, sys, urllib.request, urllib.error
+import argparse, json, re, sys, urllib.request, urllib.error
 from pathlib import Path
 
 LINK = re.compile(r'(?<!\!)\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)|!\[[^\]]*\]\(([^)\s]+)\)')
@@ -83,15 +83,25 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('paths', nargs='+', help='Markdown files or directories')
     ap.add_argument('--online', action='store_true', help='also check http(s) URLs')
+    ap.add_argument('--json', action='store_true', help='print problems as JSON')
+    ap.add_argument('--ignore', action='append', default=[], metavar='REGEX',
+                    help='skip targets matching REGEX (repeatable)')
     a = ap.parse_args(argv)
+    ignore = [re.compile(r) for r in a.ignore]
     files = []
     for p in map(Path, a.paths):
         files += sorted(p.rglob('*.md')) if p.is_dir() else [p]
-    bad = 0
+    bad, report = 0, []
     for f in files:
         for ln, t, why in check_file(f, a.online):
-            print(f'{f}:{ln}: {t}: {why}')
+            if any(r.search(t) for r in ignore):
+                continue
+            report.append({'file': str(f), 'line': ln, 'target': t, 'problem': why})
+            if not a.json:
+                print(f'{f}:{ln}: {t}: {why}')
             bad += 1
+    if a.json:
+        print(json.dumps(report, indent=2))
     print(f'{len(files)} file(s), {bad} problem(s)', file=sys.stderr)
     return 1 if bad else 0
 
