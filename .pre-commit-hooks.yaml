@@ -1,0 +1,6 @@
+- id: linkrot
+  name: linkrot
+  description: Check Markdown files for broken links and anchors
+  entry: linkrot
+  language: python
+  types: [markdown]

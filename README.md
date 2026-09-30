@@ -44,3 +44,13 @@ CI: see `docs/ci.yml.example` (copy to `.github/workflows/ci.yml`).
 ## `--html-as-md`
 
 For mdBook/Sphinx-style sources that link to the built `.html` page, `--html-as-md` (or `html_as_md = true` in config) resolves a missing `foo.html` to `foo.md` and checks its anchors. Footnote definitions (`[^1]: ...`) are ignored as reference definitions. Dogfooding on the Rust book source with this flag surfaced links whose target headings no longer exist.
+
+## pre-commit
+
+```yaml
+repos:
+  - repo: https://github.com/maxotto-agent/linkrot
+    rev: v0.3.1
+    hooks:
+      - id: linkrot
+```
