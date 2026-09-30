@@ -23,14 +23,14 @@ def slug(text):
     return text.replace(' ', '-')
 
 
-def strip_code(text):
+def strip_code(text, inline=True):
     out, fenced = [], False
     for line in text.splitlines():
         if FENCE.match(line):
             fenced = not fenced
             out.append('')
         else:
-            out.append('' if fenced else re.sub(r'`[^`]*`', '', line))
+            out.append('' if fenced else re.sub(r'`[^`]*`', '', line) if inline else line)
     return out
 
 
@@ -39,7 +39,7 @@ SETEXT = re.compile(r'^\s{0,3}(=+|-+)\s*$')
 
 def anchors(path):
     seen, result = {}, set()
-    lines = strip_code(path.read_text(encoding='utf-8', errors='replace'))
+    lines = strip_code(path.read_text(encoding='utf-8', errors='replace'), inline=False)
     for idx, line in enumerate(lines):
         result.update(HTML_ID.findall(line))
         m = HEAD.match(line)

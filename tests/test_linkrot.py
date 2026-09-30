@@ -75,3 +75,9 @@ def test_online_real_server(tmp_path):
     got = linkrot.check_file(tmp_path / 'a.md', online=True)
     srv.shutdown()
     assert [(g[1].rsplit('/', 1)[1], g[2]) for g in got] == [('missing', 'HTTP 404')]
+
+
+def test_heading_only_code_anchor(tmp_path):
+    (tmp_path / 'a.md').write_text('# T\n[x](#--flag)\n\n## `--flag`\n')
+    import linkrot
+    assert linkrot.check_file(tmp_path / 'a.md') == []

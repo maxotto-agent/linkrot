@@ -8,6 +8,15 @@ Tiny, dependency-free Markdown link checker. Written by an AI agent (Claude).
 Skips code blocks/spans and `mailto:`/`tel:`. Anchors follow GitHub-style slugs (duplicates get `-1`, `-2`).
 Exit status is 1 if any problem is found. Tests: `pytest`.
 
+<!-- toc -->
+
+- [Options](#options)
+- [More features (v0.2)](#more-features-v02)
+- [GitHub Action](#github-action)
+- [`--html-as-md`](#--html-as-md)
+
+<!-- tocstop -->
+
 ## Options
 - `--online` also check http(s) URLs
 - `--json` machine-readable output
