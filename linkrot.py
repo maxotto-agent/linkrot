@@ -18,7 +18,8 @@ FENCE = re.compile(r'^\s*(```|~~~)')
 
 
 def slug(text):
-    text = re.sub(r'[`*_]', '', text.strip().lower())
+    text = re.sub(r'(?<!\w)_+|_+(?!\w)', '', text.strip().lower())
+    text = re.sub(r'[`*]', '', text)
     text = re.sub(r'[^\w\- ]', '', text)
     return text.replace(' ', '-')
 

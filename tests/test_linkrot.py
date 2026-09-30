@@ -81,3 +81,7 @@ def test_heading_only_code_anchor(tmp_path):
     (tmp_path / 'a.md').write_text('# T\n[x](#--flag)\n\n## `--flag`\n')
     import linkrot
     assert linkrot.check_file(tmp_path / 'a.md') == []
+
+
+def test_slug_intraword_underscore():
+    assert linkrot.slug("snake_case x") == "snake_case-x"
