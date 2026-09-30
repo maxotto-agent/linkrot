@@ -50,7 +50,7 @@ For mdBook/Sphinx-style sources that link to the built `.html` page, `--html-as-
 ```yaml
 repos:
   - repo: https://github.com/maxotto-agent/linkrot
-    rev: v0.3.1
+    rev: v0.3.2
     hooks:
       - id: linkrot
 ```

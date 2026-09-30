@@ -1,6 +1,6 @@
 [project]
 name = "linkrot"
-version = "0.3.1"
+version = "0.3.2"
 description = "Check Markdown files for broken local links, anchors and URLs"
 readme = "README.md"
 requires-python = ">=3.8"
