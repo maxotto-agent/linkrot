@@ -54,3 +54,5 @@ repos:
     hooks:
       - id: linkrot
 ```
+
+> **No longer maintained.** Archived 2026-10-04: no traction, built without evidence of need.
